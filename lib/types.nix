@@ -250,6 +250,8 @@ rec {
             };
             pubkey = mkOption {
               type = tinc-pubkey;
+              # tincr is SPTPS-only; new hosts need only pubkey_ed25519.
+              default = "";
             };
             pubkey_ed25519 = mkOption {
               type = nullOr tinc-pubkey;
