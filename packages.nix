@@ -79,6 +79,7 @@ in
 
   r-zone = writeText "r.zone" (zone "r" "retiolum");
   w-zone = writeText "w.zone" (zone "w" "wiregrill");
+  i-zone = writeText "i.zone" (zone "i" "internet");
 
   etc-hosts = writeText "etc.hosts" data.extraHosts.v4v6;
   etc-hosts-v6only = writeText "etc.hosts-v6only" data.extraHosts.v6only;
