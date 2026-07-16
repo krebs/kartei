@@ -2,13 +2,12 @@
 
 Krebs host database and retiolum VPN modules.
 
-Each top-level directory that is a user name contains that user's
-host and user records.  `module.nix` declares the `krebs.*` options
-they populate so the set can be evaluated without stockholm.
+Each top-level user directory contains that user's host and user
+records. `module.nix` declares the `krebs.*` options they populate
+so the set can be evaluated without stockholm.
 
 The `retiolum` NixOS/Darwin modules consume the host database
-directly and drive [tincr](https://github.com/Mic92/tincr), so no
-generated `hosts/` or `etc.hosts` files need to be committed.
+directly and drive [tincr](https://github.com/Mic92/tincr).
 
 ## Joining retiolum
 
@@ -106,10 +105,10 @@ After `nixos-rebuild switch`, `tincr-retiolum.service` comes up and
 }
 ```
 
-Name resolution for `.r` uses tincr's built-in DNS stub via
-systemd-resolved.  A static `/etc/hosts` copy is also installed by
-default (`networking.retiolum.extraHosts`) so the mesh stays
-resolvable while tincd is restarting.
+`.r` names resolve via tincr's DNS stub through systemd-resolved.
+A static `/etc/hosts` copy is installed by default
+(`networking.retiolum.extraHosts`) so the mesh stays resolvable
+while tincd is restarting.
 
 On pre-AVX2 x86_64 hardware set
 `services.tincr.package = tincr.packages.${system}.tincd-compat;`.
@@ -148,7 +147,7 @@ darwinConfigurations.mymac = darwin.lib.darwinSystem {
 
 ## Artefacts
 
-For consumers that still want plain files:
+Plain-file outputs:
 
 ```
 nix build .#retiolum-hosts     # /etc/tinc/retiolum/hosts directory
