@@ -102,15 +102,27 @@ let
       ) net.addresses}
     '';
 
-  etcForNet =
+  # Single derivation for all peer host files; avoids one etc entry
+  # and store path per peer on large meshes.
+  mkHostsDir =
     name: net:
-    {
-      "tinc/${name}/tinc.conf".text = mkTincConf name net;
-      "tinc/${name}/tinc-up".source = mkTincUp net;
-    }
-    // lib.mapAttrs' (
-      host: text: lib.nameValuePair "tinc/${name}/hosts/${host}" { inherit text; }
-    ) net.hosts;
+    pkgs.runCommand "tinc-${name}-hosts"
+      {
+        __structuredAttrs = true;
+        hostFiles = net.hosts;
+      }
+      ''
+        mkdir -p "$out"
+        for name in "''${!hostFiles[@]}"; do
+          printf '%s' "''${hostFiles[$name]}" > "$out/$name"
+        done
+      '';
+
+  etcForNet = name: net: {
+    "tinc/${name}/tinc.conf".text = mkTincConf name net;
+    "tinc/${name}/tinc-up".source = mkTincUp net;
+    "tinc/${name}/hosts".source = mkHostsDir name net;
+  };
 in
 {
   options.services.tincr = {
