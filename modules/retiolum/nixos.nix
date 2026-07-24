@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  pkgs,
   retiolumHostData,
   ...
 }:
@@ -49,6 +50,24 @@ in
 
     environment.systemPackages = [
       config.services.tincr.networks.retiolum.package
+    ];
+
+    # setup-etc won't replace real directories left behind by the old
+    # services.tinc module with tincr's environment.etc symlinks, so the
+    # daemon would keep reading stale hosts.  Clean them up before start.
+    # "+" runs as root since /etc/tinc is root-owned and tincd is not.
+    systemd.services.tincr-retiolum.serviceConfig.ExecStartPre = lib.mkBefore [
+      "+${pkgs.writeShellScript "tincr-retiolum-migrate" ''
+        for name in hosts invitations; do
+          d=/etc/tinc/retiolum/$name
+          if [ -d "$d" ] && [ ! -L "$d" ]; then
+            rm -rf "$d"
+            if [ -e "/etc/static/tinc/retiolum/$name" ]; then
+              ln -s "/etc/static/tinc/retiolum/$name" "$d"
+            fi
+          fi
+        done
+      ''}"
     ];
   };
 }
