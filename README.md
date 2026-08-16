@@ -81,6 +81,11 @@ networking.retiolum.ed25519PrivateKeyFile =
 After `nixos-rebuild switch`, `tincr-retiolum.service` comes up and
 `ping hotdog.r` should answer.
 
+## Leaving retiolum
+
+`nix run .#remove-host` picks the host, deletes its records and
+cleans up the namespace if nothing else is left.
+
 ## NixOS
 
 ```nix

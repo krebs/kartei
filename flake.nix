@@ -62,7 +62,7 @@
       packages = forAllSystems (system:
         let pkgs = nixpkgs.legacyPackages.${system}; in
         import ./packages.nix { inherit (pkgs) lib runCommand writeText; } // {
-          # wizard to add a host: nix run .#add-host
+          # wizards: nix run .#add-host / .#remove-host
           add-host = pkgs.writeShellApplication {
             name = "add-host";
             runtimeInputs = [
@@ -71,6 +71,14 @@
               tincr.packages.${system}.tincd # sptps_keypair
             ];
             text = builtins.readFile ./scripts/add-host;
+          };
+          remove-host = pkgs.writeShellApplication {
+            name = "remove-host";
+            runtimeInputs = [
+              pkgs.gum
+              pkgs.git
+            ];
+            text = builtins.readFile ./scripts/remove-host;
           };
         });
 

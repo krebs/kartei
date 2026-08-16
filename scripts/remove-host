@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Interactive wizard to remove a host from kartei.
+set -euo pipefail
+
+die() {
+  echo "error: $*" >&2
+  exit 1
+}
+
+# run from the root of a kartei checkout
+[ -f default.nix ] && [ -d template ] || die "run me from the root of a kartei checkout"
+
+hosts=$(find . -maxdepth 3 -mindepth 3 -type d -path './*/hosts/*' \
+  ! -path './template/*' -printf '%P\n' | sort)
+[ -n "$hosts" ] || die "no hosts found"
+
+choice=$(printf '%s\n' "$hosts" | sed 's|/hosts/| |' |
+  awk '{ print $2 " (" $1 ")" }' |
+  gum filter --header "Select the host to remove")
+host=${choice%% *}
+ns=${choice##*(}
+ns=${ns%)}
+dir=$ns/hosts/$host
+
+gum confirm "Remove $dir?" || exit 1
+git rm -r -q -f "$dir"
+
+# a namespace without hosts and users is dead weight
+if [ ! -d "$ns/hosts" ] && [ ! -d "$ns/users" ]; then
+  git rm -r -q -f "$ns" 2>/dev/null || rm -rf "$ns"
+fi
+
+gum style --border rounded --padding "0 1" \
+  "Removed $host from $ns" \
+  "" \
+  "Next steps:" \
+  "  nix flake check" \
+  "  git commit -m '$ns: remove $host'" \
+  "  ...and open a PR against krebs/kartei"
