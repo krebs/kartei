@@ -13,6 +13,8 @@
 #   $ns/hosts/$host/$net/ip6                IPv6 address
 #   $ns/hosts/$host/$net/aliases            hostnames, one per line
 #   $ns/hosts/$host/$net/addrs              override for public addresses
+#   $ns/hosts/$host/$net/via                net name over which daemons are
+#                                           publicly reachable, e.g. internet
 #   $ns/hosts/$host/$net/ssh.port           sshd port if not 22
 #   $ns/hosts/$host/$net/rsa.key            tinc RSA public key (PEM)
 #   $ns/hosts/$host/$net/ed25519.key        tinc ed25519 public key
@@ -150,6 +152,11 @@ let
                     lib.mapNullable (addr: { inherit addr; }) (text (config.dir + "/ip6"));
                   description = "IPv6 address of this host inside the net";
                 };
+                via = mkOption {
+                  type = types.nullOr types.str;
+                  default = text (config.dir + "/via");
+                  description = "name of the net over which this host's tinc/wireguard daemon is publicly reachable, e.g. internet";
+                };
                 aliases = mkOption {
                   type = types.listOf types.str;
                   default = linesOf (config.dir + "/aliases");
@@ -177,9 +184,12 @@ let
                     options = {
                       dir = dirOption;
                       pubkey = mkOption {
-                        type = types.str;
-                        default = readFile (config.dir + "/rsa.key");
-                        description = "tinc RSA public key (PEM, verbatim)";
+                        type = types.nullOr types.str;
+                        default =
+                          if pathExists (config.dir + "/rsa.key")
+                          then readFile (config.dir + "/rsa.key")
+                          else null;
+                        description = "tinc RSA public key (PEM, verbatim); null for SPTPS-only hosts";
                       };
                       pubkey_ed25519 = mkOption {
                         type = types.nullOr types.str;
@@ -215,6 +225,7 @@ let
                   }));
                   default =
                     if pathExists (config.dir + "/rsa.key")
+                       || pathExists (config.dir + "/ed25519.key")
                     then { dir = config.dir; }
                     else null;
                 };
