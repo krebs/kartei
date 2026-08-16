@@ -11,20 +11,21 @@ directly and drive [tincr](https://github.com/Mic92/tincr).
 
 ## Joining retiolum
 
-Before the NixOS module can start `tincd`, the mesh needs to know
-your Ed25519 public key and you need a private key on disk.
+Joining takes two steps: publish your host's public key here in
+kartei, and point your NixOS configuration at the private key.
 
 ### 1. Add your host to kartei
 
-Fork this repository and run the wizard; it picks (or creates) your
-namespace, generates the keypair, derives the IPv6 address and
-stages the files.  It prints where to install the private key.
+Fork this repository and run
 
 ```console
 $ nix run .#add-host
 ```
 
-Check it evaluates and open a PR:
+The wizard asks for your namespace and hostname, generates a tinc
+keypair, picks an IPv6 address and writes all files where they
+belong.  Follow its instructions to install the private key on your
+host, then commit and open a PR:
 
 ```console
 $ nix flake check
@@ -32,9 +33,9 @@ $ git commit -m 'alice: add toaster'
 ```
 
 <details>
-<summary>Doing it by hand instead</summary>
+<summary>Manual steps, if you prefer to skip the wizard</summary>
 
-Generate a keypair:
+Generate a keypair and install the private half on your host:
 
 ```console
 $ nix shell --refresh 'github:Mic92/tincr'
@@ -44,7 +45,8 @@ $ sudo install -Dm600 ed25519_key.priv /var/src/secrets/tinc.retiolum.ed25519_ke
 $ rm ed25519_key.priv
 ```
 
-Then either extend your existing namespace or copy `template/`:
+Publish the public half in your namespace (copy `template/` if you
+don't have one yet):
 
 ```console
 $ cp -r template alice
@@ -65,11 +67,11 @@ $ # echo 10.243.42.1 > ip4
 
 ### 2. Enable the NixOS module
 
-Point your configuration at kartei as shown under [NixOS](#nixos) or
-[NixOS without flakes](#nixos-without-flakes).
-`networking.retiolum.nodename` defaults to `networking.hostName` and
-IPv4/IPv6 are looked up from the entry you added, so the only
-required setting is the private key path:
+Import the retiolum module as shown under [NixOS](#nixos) or
+[NixOS without flakes](#nixos-without-flakes).  Everything else is
+looked up in kartei: the node name defaults to
+`networking.hostName` and the addresses come from the entry you
+just added.  All that's left to configure is the private key path:
 
 ```nix
 networking.retiolum.ed25519PrivateKeyFile =
