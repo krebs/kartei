@@ -82,12 +82,25 @@
           };
         });
 
-      checks = forAllSystems (system: {
-        eval = nixpkgs.legacyPackages.${system}.runCommand "kartei-eval" { } ''
-          ${builtins.deepSeq data "true"}
-          touch $out
-        '';
-      });
+      checks = forAllSystems (system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+          lintErrors = import ./checks/lint.nix {
+            inherit (nixpkgs) lib;
+            root = ./.;
+            inherit (data) hosts users;
+          };
+        in
+        {
+          eval = pkgs.runCommand "kartei-eval" { } ''
+            ${builtins.deepSeq data "true"}
+            touch $out
+          '';
+          lint =
+            if lintErrors == [ ]
+            then pkgs.runCommand "kartei-lint" { } "touch $out"
+            else throw "kartei lint failed:\n${nixpkgs.lib.concatStringsSep "\n" lintErrors}";
+        });
 
       nixosConfigurations.example = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
