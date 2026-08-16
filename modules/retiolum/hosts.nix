@@ -12,7 +12,7 @@ let
   # Render a tinc host file.  Hosts with a via net (usually internet)
   # are reachable there directly (Address); everyone else is relayed.
   tincHostFile =
-    h:
+    name: h:
     let
       net = h.nets.retiolum;
       tinc = net.tinc;
@@ -22,6 +22,12 @@ let
       lib.optionals (via != null) (map (a: "Address = ${a} ${toString tinc.port}") via.addrs)
       ++ map (a: "Subnet = ${a}") tinc.subnets
       ++ map (a: "Subnet = ${a}") net.addrs
+      # bare labels: the DNS stub appends its suffix
+      ++ map (a: "Alias = ${a}") (
+        lib.filter (a: a != name) (
+          map (lib.removeSuffix ".r") (lib.filter (lib.hasSuffix ".r") net.aliases)
+        )
+      )
       ++ [ tinc.extraConfig ]
       ++ lib.optional (tinc.pubkey != null) tinc.pubkey
       ++ lib.optional (tinc.pubkey_ed25519 != null) ''
@@ -30,7 +36,7 @@ let
       ++ lib.optional (tinc.weight != null) "Weight = ${toString tinc.weight}"
     );
 
-  tincHosts = lib.mapAttrs (_: tincHostFile) sptpsHosts;
+  tincHosts = lib.mapAttrs tincHostFile sptpsHosts;
 
   netHostsLines =
     netname: tld: hosts: withV4:
