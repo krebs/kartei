@@ -14,7 +14,27 @@ directly and drive [tincr](https://github.com/Mic92/tincr).
 Before the NixOS module can start `tincd`, the mesh needs to know
 your Ed25519 public key and you need a private key on disk.
 
-### 1. Generate a keypair
+### 1. Add your host to kartei
+
+Fork this repository and run the wizard; it picks (or creates) your
+namespace, generates the keypair, derives the IPv6 address and
+stages the files.  It prints where to install the private key.
+
+```console
+$ nix run .#add-host
+```
+
+Check it evaluates and open a PR:
+
+```console
+$ nix flake check
+$ git commit -m 'alice: add toaster'
+```
+
+<details>
+<summary>Doing it by hand instead</summary>
+
+Generate a keypair:
 
 ```console
 $ nix shell --refresh 'github:Mic92/tincr'
@@ -22,16 +42,9 @@ $ # pre-AVX2 x86_64: nix shell --refresh 'github:Mic92/tincr#tincd-compat'
 $ sptps_keypair ed25519_key.priv ed25519_key.pub
 $ sudo install -Dm600 ed25519_key.priv /var/src/secrets/tinc.retiolum.ed25519_key.priv
 $ rm ed25519_key.priv
-$ grep -v '^-' ed25519_key.pub
-ZD2Ft17KwDElzv0YPV6AeKrMYMpqlMpN9hbGt/HcveL
 ```
 
-The last line is your tinc Ed25519 public key.
-
-### 2. Add your host to kartei
-
-Fork this repository and either extend your existing namespace or
-copy `template/`:
+Then either extend your existing namespace or copy `template/`:
 
 ```console
 $ cp -r template alice
@@ -48,14 +61,9 @@ $ # optional; ask in #krebs for a free 10.243.x.y
 $ # echo 10.243.42.1 > ip4
 ```
 
-Check it evaluates and open a PR:
+</details>
 
-```console
-$ nix flake check
-$ git add alice && git commit -m 'alice: add toaster'
-```
-
-### 3. Enable the NixOS module
+### 2. Enable the NixOS module
 
 Point your configuration at kartei as shown under [NixOS](#nixos) or
 [NixOS without flakes](#nixos-without-flakes).

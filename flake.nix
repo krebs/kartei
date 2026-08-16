@@ -48,9 +48,31 @@
         ca = ./modules/ca;
       };
 
+      devShells = forAllSystems (system:
+        let pkgs = nixpkgs.legacyPackages.${system}; in
+        {
+          default = pkgs.mkShellNoCC {
+            packages = [
+              pkgs.gum
+              tincr.packages.${system}.tincd # sptps_keypair
+            ];
+          };
+        });
+
       packages = forAllSystems (system:
         let pkgs = nixpkgs.legacyPackages.${system}; in
-        import ./packages.nix { inherit (pkgs) lib runCommand writeText; });
+        import ./packages.nix { inherit (pkgs) lib runCommand writeText; } // {
+          # wizard to add a host: nix run .#add-host
+          add-host = pkgs.writeShellApplication {
+            name = "add-host";
+            runtimeInputs = [
+              pkgs.gum
+              pkgs.git
+              tincr.packages.${system}.tincd # sptps_keypair
+            ];
+            text = builtins.readFile ./scripts/add-host;
+          };
+        });
 
       checks = forAllSystems (system: {
         eval = nixpkgs.legacyPackages.${system}.runCommand "kartei-eval" { } ''
