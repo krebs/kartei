@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# Interactive wizard to add a host to kartei.
+# Run inside `nix develop` for gum and sptps_keypair.
+set -euo pipefail
+
+die() {
+  echo "error: $*" >&2
+  exit 1
+}
+
+# run from the root of a kartei checkout
+[ -f default.nix ] && [ -d template ] || die "run me from the root of a kartei checkout"
+
+for tool in gum sptps_keypair nix; do
+  command -v "$tool" >/dev/null || die "$tool not found; run me inside 'nix develop'"
+done
+
+# --- namespace -------------------------------------------------------
+namespaces=$(find . -maxdepth 1 -mindepth 1 -type d \
+  ! -name '.*' ! -name template ! -name modules ! -name lib ! -name scripts \
+  -printf '%f\n' | sort)
+ns=$(printf '%s\n<new namespace>\n' "$namespaces" |
+  gum filter --header "Select your namespace")
+if [ "$ns" = "<new namespace>" ]; then
+  ns=$(gum input --header "New namespace name" --placeholder "alice")
+  [ -n "$ns" ] || die "empty namespace"
+  mail=$(gum input --header "Contact mail for users/$ns" --placeholder "alice@example.org")
+  mkdir -p "$ns/users/$ns"
+  printf '%s\n' "$mail" >"$ns/users/$ns/mail"
+fi
+
+# --- host ------------------------------------------------------------
+host=$(gum input --header "Hostname" --placeholder "toaster")
+[ -n "$host" ] || die "empty hostname"
+dir=$ns/hosts/$host/retiolum
+[ ! -e "$dir" ] || die "$dir already exists"
+
+# --- key -------------------------------------------------------------
+if gum confirm "Generate a new Ed25519 keypair with tincr?"; then
+  # not cleaned up: the user still has to install the private key
+  tmp=$(mktemp -d)
+  sptps_keypair "$tmp/ed25519_key.priv" "$tmp/ed25519_key.pub"
+  pubkey=$(grep -v '^-' "$tmp/ed25519_key.pub")
+  privnote="Install the private key on $host:
+
+  sudo install -Dm600 $tmp/ed25519_key.priv /var/src/secrets/tinc.retiolum.ed25519_key.priv
+  rm -r $tmp"
+else
+  pubkey=$(gum input --header "Ed25519 public key (grep -v '^-' ed25519_key.pub)")
+  privnote=""
+fi
+[ -n "$pubkey" ] || die "empty public key"
+
+# --- addresses -------------------------------------------------------
+ip6=$(nix eval --raw --impure --expr \
+  "((import ./lib { }).krebs.genipv6 \"retiolum\" \"$ns\" { hostName = \"$host\"; }).address")
+ip4=$(gum input --header "IPv4 (optional, ask #krebs for a free 10.243.x.y)" \
+  --placeholder "leave empty to skip" || true)
+
+# --- write -----------------------------------------------------------
+mkdir -p "$dir"
+printf '%s\n' "$host.$ns.r" >"$dir/aliases"
+printf '%s\n' "$pubkey" >"$dir/ed25519.key"
+printf '%s\n' "$ip6" >"$dir/ip6"
+[ -z "$ip4" ] || printf '%s\n' "$ip4" >"$dir/ip4"
+
+git add "$ns"
+gum style --border rounded --padding "0 1" \
+  "Added $host.$ns.r ($ip6${ip4:+, $ip4})" \
+  "" \
+  "Next steps:" \
+  "  nix flake check" \
+  "  git commit -m '$ns: add $host'" \
+  "  ...and open a PR against krebs/kartei" \
+  ${privnote:+"" "$privnote"}
