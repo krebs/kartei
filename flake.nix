@@ -24,13 +24,11 @@
         import ./lib { inherit (nixpkgs.legacyPackages.${system}) lib; });
 
       nixosModules = {
-        retiolum = { pkgs, ... }: {
+        retiolum = {
           imports = [
             tincr.nixosModules.tincr
             ./modules/retiolum/nixos.nix
           ];
-          services.tincr.package = nixpkgs.lib.mkDefault
-            tincr.packages.${pkgs.stdenv.hostPlatform.system}.tincd;
         };
         ca = ./modules/ca;
       };
