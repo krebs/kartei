@@ -54,10 +54,11 @@ let
 
   internetHosts = lib.filterAttrs (_: h: h.nets ? internet) data.hosts;
 
+  # withV4 only concerns retiolum; internet hosts always get A records.
   hostsLines =
     withV4:
     netHostsLines "retiolum" "r" retiolumHosts withV4
-    + netHostsLines "internet" "i" internetHosts withV4;
+    + netHostsLines "internet" "i" internetHosts true;
 
   own = lib.mapAttrs (_: h: {
     ip4 = h.nets.retiolum.ip4.addr or null;
