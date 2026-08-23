@@ -33,17 +33,23 @@
     },
     "root": {
       "inputs": {
+        "crane": "crane",
         "nixpkgs": "nixpkgs",
-        "tincr": "tincr"
+        "tincr": "tincr",
+        "treefmt-nix": "treefmt-nix"
       }
     },
     "tincr": {
       "inputs": {
-        "crane": "crane",
+        "crane": [
+          "crane"
+        ],
         "nixpkgs": [
           "nixpkgs"
         ],
-        "treefmt-nix": "treefmt-nix"
+        "treefmt-nix": [
+          "treefmt-nix"
+        ]
       },
       "locked": {
         "lastModified": 1787476890,
@@ -62,7 +68,6 @@
     "treefmt-nix": {
       "inputs": {
         "nixpkgs": [
-          "tincr",
           "nixpkgs"
         ]
       },
