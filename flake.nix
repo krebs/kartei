@@ -3,13 +3,20 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    crane.url = "github:ipetkov/crane";
     tincr = {
       url = "github:Mic92/tincr";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.treefmt-nix.follows = "treefmt-nix";
+      inputs.crane.follows = "crane";
     };
   };
 
-  outputs = { self, nixpkgs, tincr }:
+  outputs = { self, nixpkgs, tincr, ... }:
     let
       # All loading logic lives in ./default.nix, which also works
       # without flakes: import <kartei> { inherit lib; }
