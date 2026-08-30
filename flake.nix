@@ -8,11 +8,16 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     crane.url = "github:ipetkov/crane";
+    fenix = {
+      url = "github:nix-community/fenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     tincr = {
       url = "github:Mic92/tincr";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.treefmt-nix.follows = "treefmt-nix";
       inputs.crane.follows = "crane";
+      inputs.fenix.follows = "fenix";
     };
   };
 
