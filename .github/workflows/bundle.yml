@@ -1,0 +1,27 @@
+name: retiolum bundle
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: cachix/install-nix-action@v31
+      - name: build
+        run: |
+          out=$(nix build --no-link --print-out-paths .#retiolum-hosts)
+          tar -C "$out" --sort=name --owner=0 --group=0 --numeric-owner --mtime=@0 -czf retiolum-hosts.tar.gz .
+      - name: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view bundle >/dev/null 2>&1 ||
+            gh release create bundle --title "retiolum hosts bundle" --notes "Rolling tarball of hosts/ for tinc clients. Rebuilt on every push to master."
+          gh release upload bundle retiolum-hosts.tar.gz --clobber
