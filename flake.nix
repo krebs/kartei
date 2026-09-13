@@ -46,14 +46,11 @@
       };
 
       darwinModules = {
-        tincr = ./modules/tincr/darwin.nix;
-        retiolum = { pkgs, ... }: {
+        retiolum = {
           imports = [
-            ./modules/tincr/darwin.nix
+            tincr.darwinModules.tincr
             ./modules/retiolum/darwin.nix
           ];
-          services.tincr.package = nixpkgs.lib.mkDefault
-            tincr.packages.${pkgs.stdenv.hostPlatform.system}.tincd;
         };
         ca = ./modules/ca;
       };
