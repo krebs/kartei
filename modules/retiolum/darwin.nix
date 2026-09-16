@@ -21,6 +21,7 @@ in
         "eva"
         "ni"
         "neoprism"
+        "gum"
       ];
       extraConfig = ''
         LocalDiscovery = yes
