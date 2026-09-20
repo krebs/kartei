@@ -22,7 +22,8 @@ in
         "eve"
         "eva"
         "ni"
-        "prism"
+        "neoprism"
+        "gum"
       ];
       # See retiolum incident 2d2ab95f0: MST broadcast loops during
       # edge churn amplified SSDP/IGMP into a mesh-wide packet storm.

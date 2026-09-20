@@ -20,7 +20,8 @@ in
         "eve"
         "eva"
         "ni"
-        "prism"
+        "neoprism"
+        "gum"
       ];
       extraConfig = ''
         LocalDiscovery = yes
