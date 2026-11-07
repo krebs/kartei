@@ -1,0 +1,2 @@
+SPTPSCipher = aes-256-gcm
+SPTPSKex = x25519-mlkem768
