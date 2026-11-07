@@ -25,7 +25,9 @@ $ nix run .#add-host
 The wizard asks for your namespace and hostname, generates a tinc
 keypair, picks an IPv6 address and writes all files where they
 belong.  Follow its instructions to install the private key on your
-host, then commit and open a PR:
+host, then commit and open a PR.  Every prompt can also be answered
+with a flag (`nix run .#add-host -- --help`), which makes the wizard
+usable from scripts:
 
 ```console
 $ nix flake check

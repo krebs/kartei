@@ -1,72 +1,116 @@
 #!/usr/bin/env bash
-# Interactive wizard to add a host to kartei.
-# Run inside `nix develop` for gum and sptps_keypair.
+# Wizard to add a host to kartei. Values not given as flags are asked for
+# with gum; without a terminal, missing values are an error.
 set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+usage: add-host [--namespace NS] [--mail MAIL] [--host NAME]
+                [--pubkey KEY | --pubkey-file FILE | --generate-key]
+                [--ip4 ADDR] [--ip6 ADDR] [--alias NAME]
+
+--mail is only used for a new namespace. --ip6 defaults to genipv6,
+--alias to NAME.NS.r.
+EOF
+}
 
 die() {
   echo "error: $*" >&2
   exit 1
 }
 
+# ask FLAG GUM-ARGS...
+ask() {
+  [ -t 0 ] || die "missing $1"
+  shift
+  gum "$@"
+}
+
+ns="" mail="" host="" pubkey="" pubkey_file="" generate="" ip4="" ip6="" alias=""
+while [ $# -gt 0 ]; do
+  case $1 in
+  --namespace) ns=$2; shift ;;
+  --mail) mail=$2; shift ;;
+  --host) host=$2; shift ;;
+  --pubkey) pubkey=$2; shift ;;
+  --pubkey-file) pubkey_file=$2; shift ;;
+  --generate-key) generate=1 ;;
+  --ip4) ip4=$2; shift ;;
+  --ip6) ip6=$2; shift ;;
+  --alias) alias=$2; shift ;;
+  -h | --help) usage; exit 0 ;;
+  *) usage >&2; exit 1 ;;
+  esac
+  shift
+done
+
 # run from the root of a kartei checkout
 [ -f default.nix ] && [ -d template ] || die "run me from the root of a kartei checkout"
 
-for tool in gum sptps_keypair nix; do
-  command -v "$tool" >/dev/null || die "$tool not found; run me inside 'nix develop'"
-done
-
 # --- namespace -------------------------------------------------------
-namespaces=$(find . -maxdepth 1 -mindepth 1 -type d \
-  ! -name '.*' ! -name template ! -name modules ! -name lib ! -name scripts \
-  -printf '%f\n' | sort)
-ns=$(printf '%s\n<new namespace>\n' "$namespaces" |
-  gum filter --header "Select your namespace")
-if [ "$ns" = "<new namespace>" ]; then
-  ns=$(gum input --header "New namespace name" --placeholder "alice")
-  [ -n "$ns" ] || die "empty namespace"
-  mail=$(gum input --header "Contact mail for users/$ns" --placeholder "alice@example.org")
+if [ -z "$ns" ]; then
+  namespaces=$(find . -maxdepth 1 -mindepth 1 -type d \
+    ! -name '.*' ! -name template ! -name modules ! -name lib ! -name scripts \
+    -printf '%f\n' | sort)
+  ns=$(printf '%s\n<new namespace>\n' "$namespaces" |
+    ask --namespace filter --header "Select your namespace")
+  if [ "$ns" = "<new namespace>" ]; then
+    ns=$(ask --namespace input --header "New namespace name" --placeholder "alice")
+  fi
+fi
+[ -n "$ns" ] || die "empty namespace"
+if [ ! -d "$ns" ]; then
+  [ -n "$mail" ] || mail=$(ask --mail input --header "Contact mail for users/$ns" --placeholder "alice@example.org")
   mkdir -p "$ns/users/$ns"
   printf '%s\n' "$mail" >"$ns/users/$ns/mail"
 fi
 
 # --- host ------------------------------------------------------------
-host=$(gum input --header "Hostname" --placeholder "toaster")
+[ -n "$host" ] || host=$(ask --host input --header "Hostname" --placeholder "toaster")
 [ -n "$host" ] || die "empty hostname"
 dir=$ns/hosts/$host/retiolum
 [ ! -e "$dir" ] || die "$dir already exists"
 
 # --- key -------------------------------------------------------------
-if gum confirm "Generate a new Ed25519 keypair with tincr?"; then
+privnote=""
+if [ -z "$pubkey" ] && [ -z "$pubkey_file" ] && [ -z "$generate" ]; then
+  if ask "--pubkey, --pubkey-file or --generate-key" confirm "Generate a new Ed25519 keypair with tincr?"; then
+    generate=1
+  else
+    pubkey=$(gum input --header "Ed25519 public key (grep -v '^-' ed25519_key.pub)")
+  fi
+fi
+if [ -n "$generate" ]; then
   # not cleaned up: the user still has to install the private key
   tmp=$(mktemp -d)
   sptps_keypair "$tmp/ed25519_key.priv" "$tmp/ed25519_key.pub"
-  pubkey=$(grep -v '^-' "$tmp/ed25519_key.pub")
+  pubkey_file=$tmp/ed25519_key.pub
   privnote="Install the private key on $host:
 
   sudo install -Dm600 $tmp/ed25519_key.priv /var/src/secrets/tinc.retiolum.ed25519_key.priv
   rm -r $tmp"
-else
-  pubkey=$(gum input --header "Ed25519 public key (grep -v '^-' ed25519_key.pub)")
-  privnote=""
 fi
+[ -z "$pubkey_file" ] || pubkey=$(grep -v '^-' "$pubkey_file")
 [ -n "$pubkey" ] || die "empty public key"
 
 # --- addresses -------------------------------------------------------
-ip6=$(nix eval --raw --impure --expr \
+[ -n "$ip6" ] || ip6=$(nix eval --raw --impure --expr \
   "((import ./lib { }).krebs.genipv6 \"retiolum\" \"$ns\" { hostName = \"$host\"; }).address")
-ip4=$(gum input --header "IPv4 (optional, ask #krebs for a free 10.243.x.y)" \
-  --placeholder "leave empty to skip" || true)
+if [ -z "$ip4" ] && [ -t 0 ]; then
+  ip4=$(gum input --header "IPv4 (optional, ask #krebs for a free 10.243.x.y)" \
+    --placeholder "leave empty to skip" || true)
+fi
 
 # --- write -----------------------------------------------------------
 mkdir -p "$dir"
-printf '%s\n' "$host.$ns.r" >"$dir/aliases"
+printf '%s\n' "${alias:-$host.$ns.r}" >"$dir/aliases"
 printf '%s\n' "$pubkey" >"$dir/ed25519.key"
 printf '%s\n' "$ip6" >"$dir/ip6"
 [ -z "$ip4" ] || printf '%s\n' "$ip4" >"$dir/ip4"
 
 git add "$ns"
-gum style --border rounded --padding "0 1" \
-  "Added $host.$ns.r ($ip6${ip4:+, $ip4})" \
+printf '%s\n' \
+  "Added ${alias:-$host.$ns.r} ($ip6${ip4:+, $ip4})" \
   "" \
   "Next steps:" \
   "  nix flake check" \
