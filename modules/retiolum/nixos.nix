@@ -30,6 +30,7 @@ in
       extraConfig = ''
         LocalDiscovery = yes
         Broadcast = no
+        StrictSubnets = yes
       '';
       addresses = lib.optional (cfg.ipv4 != null) "${cfg.ipv4}/12" ++ [ "${cfg.ipv6}/16" ];
       interfaceName = "tinc.retiolum";
